@@ -1,0 +1,29 @@
+# ---- 系统/编辑器 ----
+.workbuddy/
+.DS_Store
+Thumbs.db
+
+# ---- Python 缓存 ----
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# ---- 图片素材不入库（体积大、涉及来源授权）----
+# 仅保留目录占位 .gitkeep；实拍/下载的图片一律忽略
+dataset/**/*.jpg
+dataset/**/*.jpeg
+dataset/**/*.png
+dataset/**/*.webp
+dataset/**/*.gif
+dataset/**/*.bmp
+dataset/**/*.tif
+dataset/**/*.tiff
+collection/实拍图片/*
+!collection/实拍图片/.gitkeep
+
+# ---- 运行产物 ----
+*.tmp
+*.bak
+~$*

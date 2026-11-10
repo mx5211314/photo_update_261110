@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>图片元数据工作台 · ImageMeta Studio</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="m21 15-4.5-4.5L6 21"/><path d="M14 18h4v4"/></svg></div>
+      <div><h1>图片元数据工作台</h1><span class="sub">批量补元数据 · AI 自动打标 · 自定义规格</span></div>
+    </div>
+    <div class="top-actions">
+      <span id="health" class="pill muted">连接中…</span>
+      <button class="btn ghost" data-act="help">使用说明</button>
+      <button class="btn ghost" data-act="ai-settings">AI 设置</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- ============ 左侧：选择图片 ============ -->
+    <aside class="sidebar">
+      <div class="step-head"><span class="step-num">1</span><h2>选择图片</h2></div>
+      <p class="hint">选一个文件夹（下载目录 / 桌面 / 截图目录），或直接把图片拖进下方虚线框。</p>
+
+      <label class="field-label">输入目录</label>
+      <div class="row">
+        <input id="root-input" class="input" placeholder="例如 C:\Users\Xin\Downloads" spellcheck="false">
+        <button class="btn" data-act="browse" title="浏览本地文件夹">浏览</button>
+      </div>
+      <div class="row between">
+        <label class="check"><input type="checkbox" id="recursive" checked> 包含子文件夹</label>
+        <button class="btn primary block" data-act="scan">扫描图片</button>
+      </div>
+
+      <div id="dropzone" class="dropzone">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+        <b>拖拽图片到这里</b>
+        <span>或 <button class="link" data-act="pick-files">点此选择文件</button>（会复制到工作台收件箱）</span>
+      </div>
+      <input type="file" id="file-input" multiple accept="image/*" hidden>
+
+      <div id="scan-stat" class="stat-box empty">尚未扫描</div>
+
+      <div class="side-note">
+        <b>会写进图片里的信息</b>
+        <ul>
+          <li>EXIF：标题 / 描述 / 作者 / 版权 / 关键词</li>
+          <li>XMP：上述字段 + 分类 + 自定义字段</li>
+          <li>PNG：tEXt / iTXt 文本块 + XMP</li>
+          <li>另附 <code>metadata.csv</code> / <code>metadata.json</code> 台账</li>
+        </ul>
+        <b class="safe">原图永远不会被覆盖</b>
+        <p>处理结果统一写入独立输出目录；BMP / GIF 会自动转存 PNG 以便内嵌元数据。</p>
+      </div>
+    </aside>
+
+    <!-- ============ 右侧主区 ============ -->
+    <main class="main">
+      <!-- 步骤 2 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="step-head"><span class="step-num">2</span><h2>补充元数据</h2><span class="count" id="meta-count">0 张</span></div>
+          <div class="toolbar">
+            <label class="check"><input type="checkbox" id="select-all"> 全选</label>
+            <button class="btn primary sm" data-act="autofill">按目录 / 来源清单自动填充</button>
+            <button class="btn ghost sm" data-act="ai-selected">AI 生成（所选）</button>
+            <button class="btn ghost sm" data-act="ai-all">AI 生成（全部）</button>
+            <button class="btn ghost sm" data-act="offline">离线补全</button>
+            <button class="btn ghost sm" data-act="batch">批量套用</button>
+            <button class="btn ghost sm danger-text" data-act="clear-meta">清空</button>
+          </div>
+        </div>
+        <div id="table-wrap" class="table-wrap">
+          <div class="empty-state">先在左侧选择一个文件夹并扫描 <span class="kbd">↓</span></div>
+        </div>
+      </section>
+
+      <!-- 步骤 3 -->
+      <section class="card">
+        <div class="step-head"><span class="step-num">3</span><h2>自定义输出规格</h2><span class="count">尺寸 / 格式 / 命名</span></div>
+        <div class="grid-3">
+          <div class="opt-block">
+            <label class="field-label">目标尺寸（宽 × 高，留 0 = 保持原样）</label>
+            <div class="row">
+              <input id="opt-w" class="input num" type="number" min="0" max="20000" value="0">
+              <span class="times">×</span>
+              <input id="opt-h" class="input num" type="number" min="0" max="20000" value="0">
+            </div>
+            <label class="field-label mt">画面比例（锁定后改宽自动算高）</label>
+            <select id="opt-ratio" class="input">
+              <option value="free">自由（完全按上面宽高）</option>
+              <option value="16:9">16:9 横屏</option>
+              <option value="9:16">9:16 竖屏</option>
+              <option value="4:3">4:3</option>
+              <option value="3:2">3:2</option>
+              <option value="1:1">1:1 正方形</option>
+            </select>
+            <div class="presets">
+              <button class="chip" data-preset="0,0,free">保持原样</button>
+              <button class="chip" data-preset="1920,1080,16:9">1920 × 1080 · 16:9</button>
+              <button class="chip" data-preset="1600,900,16:9">1600 × 900</button>
+              <button class="chip" data-preset="1280,720,16:9">1280 × 720</button>
+              <button class="chip" data-preset="960,540,16:9">960 × 540</button>
+              <button class="chip" data-preset="1080,720,3:2">1080 × 720（3:2）</button>
+              <button class="chip" data-preset="1080,1080,1:1">1080 × 1080</button>
+            </div>
+            <button class="btn primary sm" data-act="onekey-169" style="margin-top:9px">一键 16:9 · 裁剪铺满</button>
+            <div class="hint" style="margin:8px 0 0">1080 × 720 是 3:2，不是 16:9；要满幅不留白，请配「居中裁剪」。</div>
+          </div>
+          <div class="opt-block">
+            <label class="field-label">适配方式（16:9 满幅建议选「裁剪铺满」）</label>
+            <select id="opt-fit" class="input">
+              <option value="contain">等比缩放 + 补边（完整保留画面）</option>
+              <option value="cover">等比缩放 + 居中裁剪（铺满）</option>
+              <option value="stretch">拉伸到精确尺寸</option>
+              <option value="none">不调整尺寸</option>
+            </select>
+            <label class="field-label mt">补边颜色</label>
+            <div class="row"><input id="opt-bg" class="color" type="color" value="#ffffff"><input id="opt-bg-text" class="input" value="#FFFFFF" spellcheck="false"></div>
+          </div>
+          <div class="opt-block">
+            <label class="field-label">输出格式 / 质量</label>
+            <select id="opt-format" class="input">
+              <option value="keep">保持原格式</option>
+              <option value="jpg">统一 JPG</option>
+              <option value="png">统一 PNG</option>
+              <option value="webp">统一 WebP</option>
+            </select>
+            <label class="field-label mt">JPG / WebP 质量 <span id="q-label">92</span></label>
+            <input id="opt-quality" type="range" min="50" max="100" value="92">
+          </div>
+        </div>
+        <div class="grid-3 mt-grid">
+          <div class="opt-block">
+            <label class="field-label">输出目录（留空 = 输入目录下的 <code>_ImageMeta_输出</code>）</label>
+            <input id="opt-outdir" class="input" placeholder="留空自动创建" spellcheck="false">
+          </div>
+          <div class="opt-block">
+            <label class="field-label">文件名后缀</label>
+            <input id="opt-suffix" class="input" placeholder="例如 _meta（只填文字，别带 .jpg）" spellcheck="false">
+          </div>
+          <div class="opt-block">
+            <label class="field-label">其他</label>
+            <label class="check"><input type="checkbox" id="opt-tree" checked> 保留原有子目录结构</label>
+            <label class="check"><input type="checkbox" id="opt-sidecar" checked> 生成 CSV / JSON 台账</label>
+          </div>
+        </div>
+        <div class="notice">自定义字段（例如 <code>规格 = 1080*720</code>、<code>项目 = CES</code>）在「批量套用」或逐张编辑里添加，会一并写入 XMP 与台账。</div>
+      </section>
+
+      <!-- 步骤 4 -->
+      <section class="card">
+        <div class="card-head">
+          <div class="step-head"><span class="step-num">4</span><h2>转换并另存</h2></div>
+          <div class="toolbar">
+            <button class="btn primary" data-act="run">转换为带元数据的图片</button>
+            <button class="btn ghost sm hidden" data-act="cancel-job" id="cancel-btn">取消任务</button>
+          </div>
+        </div>
+        <div class="notice" style="margin-top:0">转换会<b>另存一份新的图片文件</b>（内嵌标题 / 描述 / 关键词等元数据），原图保留不动；成品默认放在输入目录下的 <code>_ImageMeta_输出</code>。</div>
+        <div id="progress-wrap" class="progress-wrap hidden">
+          <div class="progress-line"><div id="progress-bar"></div></div>
+          <div class="progress-meta"><span id="progress-text">准备中…</span><span id="progress-pct">0%</span></div>
+        </div>
+        <div id="report" class="report empty">处理结果会显示在这里</div>
+      </section>
+      <footer class="foot">本机运行 · 数据不出本机 · 仅监听 127.0.0.1 · 图片元数据工作台 v1.0</footer>
+    </main>
+  </div>
+</div>
+
+<!-- ============ 目录浏览 ============ -->
+<div class="modal hidden" id="modal-dir">
+  <div class="modal-box">
+    <div class="modal-head"><h3>选择输入文件夹</h3><button class="x" data-act="close-modal">×</button></div>
+    <div class="crumbs"><span id="dir-current">本机</span></div>
+    <div id="dir-list" class="dir-list"></div>
+    <div class="modal-foot">
+      <button class="btn ghost sm" data-act="dir-up">上一级</button>
+      <button class="btn primary" data-act="dir-confirm">选择当前目录</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ AI 设置 ============ -->
+<div class="modal hidden" id="modal-ai">
+  <div class="modal-box wide">
+    <div class="modal-head"><h3>AI 打标设置</h3><button class="x" data-act="close-modal">×</button></div>
+    <p class="hint">填入任意兼容 OpenAI <code>/chat/completions</code> 的视觉模型接口（官方 API、本机网关、第三方中转均可）。密钥只保存在本机 <code>config.json</code>；不填就用离线兜底补全。</p>
+    <div class="grid-2">
+      <div><label class="field-label">接口地址 Base URL</label><input id="ai-base" class="input" placeholder="https://api.openai.com/v1" spellcheck="false"></div>
+      <div><label class="field-label">模型</label><input id="ai-model" class="input" placeholder="gpt-4o-mini" spellcheck="false"></div>
+      <div><label class="field-label">API Key</label><input id="ai-key" class="input" type="password" placeholder="留空表示沿用已保存的密钥" autocomplete="off"></div>
+      <div class="row"><div class="grow"><label class="field-label">并发数</label><input id="ai-conc" class="input num" type="number" min="1" max="8" value="3"></div><div class="grow"><label class="field-label">超时（秒）</label><input id="ai-timeout" class="input num" type="number" min="5" max="300" value="60"></div></div>
+      <div><label class="field-label mt">代理策略（本机网关务必保持「自动」或「直连」）</label>
+        <select id="ai-proxy" class="input">
+          <option value="auto">自动：本机地址直连，外网走环境代理</option>
+          <option value="direct">直连：所有请求都不走代理</option>
+          <option value="env">环境代理：全部遵从 HTTP_PROXY / HTTPS_PROXY</option>
+        </select></div>
+    </div>
+    <label class="field-label mt">提示词（支持 <code>{filename}</code> 占位，要求模型返回 JSON）</label>
+    <textarea id="ai-prompt" class="input area" rows="6"></textarea>
+    <div id="ai-test-result" class="notice hidden"></div>
+    <div class="modal-foot">
+      <button class="btn ghost" data-act="ai-test">测试连接</button>
+      <button class="btn primary" data-act="ai-save">保存设置</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 逐张编辑 ============ -->
+<div class="modal hidden" id="modal-edit">
+  <div class="modal-box wide">
+    <div class="modal-head"><h3 id="edit-title">编辑元数据</h3><button class="x" data-act="close-modal">×</button></div>
+    <div class="edit-body">
+      <div class="edit-preview"><img id="edit-img" alt="预览"><div id="edit-file" class="mono"></div></div>
+      <div class="edit-fields">
+        <label class="field-label">标题</label><input id="f-title" class="input">
+        <label class="field-label mt">描述</label><textarea id="f-desc" class="input area" rows="3"></textarea>
+        <div class="grid-2">
+          <div><label class="field-label mt">关键词（分号或逗号分隔）</label><input id="f-kw" class="input"></div>
+          <div><label class="field-label mt">分类</label><input id="f-cat" class="input"></div>
+          <div><label class="field-label mt">作者</label><input id="f-author" class="input"></div>
+          <div><label class="field-label mt">版权</label><input id="f-copyright" class="input"></div>
+        </div>
+        <label class="field-label mt">无障碍替代文本 Alt</label><input id="f-alt" class="input">
+        <label class="field-label mt">自定义字段</label>
+        <div id="custom-rows"></div>
+        <button class="btn ghost sm" data-act="add-custom">+ 添加字段</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div class="row"><button class="btn ghost sm" data-act="edit-prev">← 上一张</button><button class="btn ghost sm" data-act="edit-next">下一张 →</button></div>
+      <div class="row"><button class="btn ghost" data-act="close-modal">取消</button><button class="btn primary" data-act="edit-save">保存</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 批量套用 ============ -->
+<div class="modal hidden" id="modal-batch">
+  <div class="modal-box">
+    <div class="modal-head"><h3>批量套用到所选图片</h3><button class="x" data-act="close-modal">×</button></div>
+    <p class="hint">只填写需要修改的字段，留空则不动。填写即覆盖（关键词为追加，不重复）。</p>
+    <div class="grid-2">
+      <div><label class="field-label">作者</label><input id="b-author" class="input"></div>
+      <div><label class="field-label">版权</label><input id="b-copyright" class="input"></div>
+      <div><label class="field-label">分类</label><input id="b-cat" class="input"></div>
+      <div><label class="field-label">标题前缀</label><input id="b-prefix" class="input" placeholder="例如 素材_"></div>
+    </div>
+    <label class="field-label mt">追加关键词（分号或逗号分隔）</label><input id="b-kw" class="input" placeholder="例如 截图, 归档, 1080*720">
+    <label class="field-label mt">自定义字段（会写入 XMP 与台账，例如 规格 = 1080*720）</label>
+    <div class="row"><input id="b-ckey" class="input" placeholder="字段名，如 规格"><input id="b-cval" class="input" placeholder="字段值，如 1080*720"></div>
+    <div class="modal-foot"><button class="btn ghost" data-act="close-modal">取消</button><button class="btn primary" data-act="batch-apply">应用到所选</button></div>
+  </div>
+</div>
+
+<!-- ============ 帮助 ============ -->
+<div class="modal hidden" id="modal-help">
+  <div class="modal-box wide">
+    <div class="modal-head"><h3>使用说明</h3><button class="x" data-act="close-modal">×</button></div>
+    <div class="help-body">
+      <h4>三步走</h4>
+      <ol><li>左侧选目录 → 扫描（或直接拖图片进来）。</li><li>点「按目录 / 来源清单自动填充」一次性写入类别、姿态、编号、作者、授权、来源页；也可以点「AI 生成」补标题/描述/关键词，或逐张编辑、批量套用。</li><li>设置输出规格（如 16:9 / 1920 × 1080）→ 点「转换为带元数据的图片」。结果在新目录，附 CSV / JSON 台账。</li></ol>
+      <h4>元数据都写到哪</h4>
+      <p>JPEG / WebP / TIFF：EXIF（含 Windows XP 系列 UTF-16 标签）+ XMP APP1；PNG：tEXt / iTXt 文本块 + XMP。中文走 UTF-16 与 XMP，不会被 EXIF 的 ASCII 字段截断。自定义字段写入 XMP 的 <code>ims:</code> 命名空间与台账。</p>
+      <h4>尺寸模式</h4>
+      <p><b>补边</b>等比缩放后加纯色边，画面完整；<b>裁剪</b>等比放大后居中裁切，铺满目标；<b>拉伸</b>精确到像素但会变形；<b>不调整</b>只写元数据。</p>
+      <p>要固定 <b>16:9</b>：在「画面比例」里选 16:9，只填宽度高度就自动算好；点「一键 16:9 · 裁剪铺满」直接得到满幅成品。标准 16:9 尺寸为 1920×1080 / 1600×900 / 1280×720 / 960×540，<b>1080×720 是 3:2</b>。</p>
+      <h4>安全约定</h4>
+      <p>输出默认写到输入目录下的 <code>_ImageMeta_输出</code>，同名文件自动加序号，<b>绝不覆盖原图</b>。服务只监听 127.0.0.1，图片与密钥都不上传。</p>
+      <h4>AI 接口</h4>
+      <p>兼容 OpenAI 视觉消息格式（<code>image_url</code> + base64）。本机网关例如 <code>http://127.0.0.1:xxx/v1</code> 也可以填。失败会自动离线兜底并在报告里列出原因。</p>
+    </div>
+    <div class="modal-foot"><button class="btn primary" data-act="close-modal">知道了</button></div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/app.js"></script>
+</body>
+</html>

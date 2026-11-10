@@ -1,0 +1,25 @@
+{
+  "ai": {
+    "base_url": "https://api.openai.com/v1",
+    "api_key": "",
+    "model": "gpt-4o-mini",
+    "concurrency": 3,
+    "timeout": 60,
+    "proxy_mode": "auto",
+    "prompt": "你是图片素材管理助手。分析这张图片，输出严格的 JSON 对象（不要 Markdown 代码块、不要额外文字），字段如下：\n{\"title\":\"不超过20字的中文标题\",\"description\":\"60-120字的客观画面描述\",\"alt\":\"一句话的无障碍替代文本\",\"keywords\":[\"5到8个中文关键词\"],\"category\":\"一个分类词\"}\n只描述画面中可见的内容，不要臆测。文件名参考：{filename}"
+  },
+  "defaults": {
+    "author": "",
+    "copyright": "",
+    "width": 1920,
+    "height": 1080,
+    "ratio": "16:9",
+    "fit": "cover",
+    "bg": "#FFFFFF",
+    "format": "jpg",
+    "quality": 100,
+    "suffix": "",
+    "sidecar": false,
+    "keep_tree": false
+  }
+}
